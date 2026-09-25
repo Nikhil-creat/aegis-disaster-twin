@@ -1,0 +1,22 @@
+FLOOD RESPONSE STANDARD OPERATING PROCEDURE (adapted from NDMA guidelines)
+
+1. ZONE CLASSIFICATION: Zones with flood extent above 30% of surveyed area are
+classified as high-priority for boat-based evacuation. Zones between 10-30%
+require monitoring with ground vehicle standby.
+
+2. RESOURCE DISPATCH ORDER: Rescue teams are dispatched first to zones marked
+"destroyed" or "major-damage" with confirmed population presence. Boats are
+reserved for zones exceeding the 30% flood-extent threshold. Ambulances are
+pre-positioned at zones with population estimates above 500 residents.
+
+3. COMMUNICATION PROTOCOL: Public alerts must state the zone identifier,
+severity classification, and expected responder ETA. Alerts must avoid
+speculative casualty figures until confirmed by ground teams.
+
+4. ESCALATION: If more than 3 zones simultaneously reach "destroyed"
+classification, escalate to regional disaster command and request mutual
+aid from neighboring districts.
+
+5. SHELTER ACTIVATION: Shelters are activated when displaced population
+estimates exceed the shelter's rated capacity by less than 20%. Beyond that
+threshold, secondary shelter sites must be identified within 2km.

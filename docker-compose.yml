@@ -1,0 +1,71 @@
+version: "3.9"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 15s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+
+services:
+  ingestion-gateway:
+    build: ./services/ingestion-gateway
+    ports: ["8000:8000"]
+    networks: [aegis-net]
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+
+  cnn-inference:
+    build: ./services/cnn-inference
+    ports: ["8001:8001"]
+    volumes:
+      - ./models:/models
+    networks: [aegis-net]
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/ready')"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2G }
+
+  rag-service:
+    build: ./services/rag-service
+    ports: ["8003:8003"]
+    volumes:
+      - ./data/sample-protocols:/data/sample-protocols
+    networks: [aegis-net]
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/ready')"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G }
+
+  agent-orchestrator:
+    build: ./services/agent-orchestrator
+    ports: ["8002:8002"]
+    environment:
+      - RAG_SERVICE_URL=http://rag-service:8003
+    depends_on:
+      rag-service:
+        condition: service_healthy
+      cnn-inference:
+        condition: service_healthy
+    networks: [aegis-net]
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/ready')"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+
+networks:
+  aegis-net:
+    driver: bridge
