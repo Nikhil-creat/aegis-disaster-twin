@@ -1,7 +1,10 @@
 # Aegis — Agentic Disaster Response Digital Twin
 
-**Designed & developed by [Nikhil Chary Sriramoju](https://github.com/Nikhil-creat)**
-[GitHub](https://github.com/Nikhil-creat) · [LinkedIn](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a) · sriramojunikhil66@gmail.com
+**Designed & Developed by 
+# [Nikhil Chary Sriramoju](https://github.com/Nikhil-creat)**
+[GitHub](https://github.com/Nikhil-creat) 
+[LinkedIn](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a) 
+sriramojunikhil66@gmail.com
 
 **Live demo:** _add your GitHub Pages link here after deploying (see below)_
 
@@ -136,5 +139,6 @@ aegis-disaster-twin/
 
 ## Author
 
-**Nikhil Chary Sriramoju** — BTech CSE (Final Year)
+**NIKHIL CHARY SRIRAMOJU** 
+— BTech CSE (Final Year)
 GitHub: [Nikhil-creat](https://github.com/Nikhil-creat) · LinkedIn: [nikhil-chary-sriramoju](https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a) · Email: sriramojunikhil66@gmail.com
