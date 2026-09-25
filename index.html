@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aegis — Disaster Response Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #060a10;
+    --bg-1: #0b121b;
+    --bg-2: #121b27;
+    --glass: rgba(18,27,39,0.62);
+    --line: #1e2c3f;
+    --line-hi: #2c4058;
+    --text-hi: #eef3f9;
+    --text-mid: #8ea0b8;
+    --text-lo: #526279;
+    --amber: #ffb454;
+    --amber-glow: rgba(255,180,84,0.35);
+    --red: #ff5d6c;
+    --cyan: #5be3ff;
+    --cyan-glow: rgba(91,227,255,0.3);
+    --green: #3fe0a5;
+    --violet: #9d7bff;
+    --font-ui: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg-0); color: var(--text-hi);
+    font-family: var(--font-ui); overflow: hidden;
+  }
+  body { display: flex; flex-direction: column; position: relative; }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 500;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 501;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+  }
+
+  #boot {
+    position: fixed; inset: 0; z-index: 1000; background: var(--bg-0);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: var(--font-mono); color: var(--cyan); gap: 14px;
+    transition: opacity 0.6s ease, visibility 0.6s;
+  }
+  #boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  .boot-mark { font-family: var(--font-ui); font-size: 15px; font-weight: 700; letter-spacing: 6px; color: var(--text-hi); }
+  .boot-line { font-size: 11.5px; color: var(--text-lo); min-height: 16px; }
+  .boot-bar { width: 260px; height: 2px; background: var(--line); overflow: hidden; border-radius: 2px; }
+  .boot-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--amber)); transition: width 0.25s ease; }
+  .boot-credit { position: absolute; bottom: 26px; font-size: 10px; color: var(--text-lo); letter-spacing: 1px; }
+  .boot-credit b { color: var(--text-mid); }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 20px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    flex: 0 0 auto; gap: 14px; flex-wrap: wrap; position: relative; z-index: 2;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 30px; height: 30px; border: 1px solid var(--amber); border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    font-family: var(--font-mono); font-size: 13px; color: var(--amber);
+    box-shadow: 0 0 14px var(--amber-glow) inset, 0 0 10px var(--amber-glow);
+  }
+  .brand-name { font-weight: 700; font-size: 16px; letter-spacing: 1px; }
+  .brand-sub { font-size: 10.5px; color: var(--text-lo); font-family: var(--font-mono); letter-spacing: 0.3px; }
+  .status-strip { display: flex; gap: 16px; align-items: center; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mid); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 6px currentColor; }
+  .live-clock { color: var(--text-hi); }
+  .creator-badge {
+    font-family: var(--font-mono); font-size: 9.5px; color: var(--text-lo);
+    border-left: 1px solid var(--line); padding-left: 14px; letter-spacing: 0.3px;
+    display: flex; align-items: center; gap: 6px; cursor: pointer; transition: color 0.2s;
+  }
+  .creator-badge:hover { color: var(--cyan); }
+  .creator-badge b { color: var(--text-mid); }
+  .creator-badge:hover b { color: var(--cyan); }
+
+  main {
+    flex: 1 1 auto; display: grid;
+    grid-template-columns: 1fr 336px;
+    grid-template-rows: 1fr 160px;
+    gap: 1px; background: var(--line); overflow: hidden;
+    min-height: 0; position: relative; z-index: 1;
+  }
+  .panel { background: var(--bg-1); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .panel-head {
+    padding: 10px 15px; border-bottom: 1px solid var(--line);
+    font-size: 10.5px; letter-spacing: 1px; color: var(--text-mid); text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto;
+    font-family: var(--font-mono);
+  }
+  .panel-head .count { color: var(--cyan); font-family: var(--font-mono); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  #viewport-wrap { grid-column: 1; grid-row: 1; position: relative; background: radial-gradient(ellipse at 50% 40%, #0d1520 0%, #060a10 75%); }
+  #viewport { width: 100%; height: 100%; display: block; cursor: grab; }
+  #viewport:active { cursor: grabbing; }
+
+  .glass {
+    background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--line-hi); border-radius: 8px;
+  }
+
+  .twin-overlay {
+    position: absolute; top: 14px; left: 16px; font-family: var(--font-mono);
+    font-size: 10.5px; color: var(--text-mid); line-height: 1.7; pointer-events: none;
+    padding: 10px 13px;
+  }
+  .twin-overlay b { color: var(--text-hi); }
+  .twin-overlay .accent { color: var(--cyan); }
+
+  .legend { position: absolute; bottom: 14px; left: 16px; display: flex; gap: 15px; font-family: var(--font-mono); font-size: 9.5px; color: var(--text-mid); padding: 8px 12px; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; box-shadow: 0 0 6px currentColor; }
+
+  .reliability-panel {
+    position: absolute; bottom: 14px; right: 16px; width: 210px; padding: 12px 14px;
+    font-family: var(--font-mono); font-size: 10.5px;
+  }
+  .rel-head { color: var(--text-lo); letter-spacing: 1px; font-size: 9px; margin-bottom: 8px; }
+  .rel-row { display: flex; justify-content: space-between; padding: 2.5px 0; color: var(--text-mid); }
+  .rel-row b { color: var(--text-hi); font-weight: 500; }
+  .rel-row b.ok { color: var(--green); text-shadow: 0 0 6px rgba(63,224,165,0.4); }
+  .rel-row b.warn { color: var(--amber); text-shadow: 0 0 6px var(--amber-glow); }
+  .rel-row b.bad { color: var(--red); text-shadow: 0 0 6px rgba(255,93,108,0.4); }
+  #rel-sparkline { width: 100%; height: 34px; margin-top: 8px; display: block; }
+
+  #zone-selected {
+    position: absolute; top: 14px; right: 16px; width: 250px;
+    padding: 14px; font-size: 11.5px; display: none;
+  }
+  #zone-selected.show { display: block; }
+  #zone-selected h4 { margin: 0 0 10px; font-family: var(--font-mono); font-size: 12px; color: var(--amber); letter-spacing: 0.5px; text-shadow: 0 0 10px var(--amber-glow); }
+  #zone-selected .row { display: flex; justify-content: space-between; padding: 3.5px 0; color: var(--text-mid); }
+  #zone-selected .row b { color: var(--text-hi); font-weight: 500; font-family: var(--font-mono); }
+
+  #side-panel { grid-column: 2; grid-row: 1 / 3; }
+  #zone-list { flex: 1; overflow-y: auto; }
+  .zone-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 15px;
+    border-bottom: 1px solid var(--line); font-size: 11.5px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .zone-row:hover { background: var(--bg-2); }
+  .zone-row.active { background: var(--bg-2); border-left: 2px solid var(--amber); box-shadow: inset 0 0 20px rgba(255,180,84,0.06); }
+  .zone-sev { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 6px currentColor; }
+  .zone-id { font-family: var(--font-mono); color: var(--text-hi); width: 46px; flex: 0 0 auto; }
+  .zone-meta { color: var(--text-lo); font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+
+  #cycle-btn {
+    margin: 12px 15px; padding: 11px; background: linear-gradient(135deg, var(--amber), #ff8a4c);
+    color: #1a1206; border: none; border-radius: 6px; font-family: var(--font-ui); font-weight: 700;
+    font-size: 12.5px; cursor: pointer; letter-spacing: 0.4px;
+    box-shadow: 0 0 22px var(--amber-glow), 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #cycle-btn:hover { transform: translateY(-1px); box-shadow: 0 0 30px var(--amber-glow), 0 6px 14px rgba(0,0,0,0.35); }
+  #cycle-btn:disabled { background: var(--bg-2); color: var(--text-lo); cursor: default; box-shadow: none; }
+
+  #agent-log { grid-column: 1; grid-row: 2; padding: 11px 15px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px; }
+  .log-line { padding: 3px 0; color: var(--text-mid); display: flex; gap: 9px; }
+  .log-tag { flex: 0 0 auto; font-weight: 600; }
+  .log-tag.triage { color: var(--cyan); text-shadow: 0 0 6px var(--cyan-glow); }
+  .log-tag.resource { color: var(--amber); text-shadow: 0 0 6px var(--amber-glow); }
+  .log-tag.comms { color: var(--green); }
+  .log-time { color: var(--text-lo); flex: 0 0 auto; }
+
+  #alert-panel { flex: 1; overflow-y: auto; }
+  .alert-item { padding: 10px 15px; border-bottom: 1px solid var(--line); font-size: 11px; line-height: 1.55; color: var(--text-mid); }
+  .alert-item b { color: var(--text-hi); font-family: var(--font-mono); }
+
+  footer {
+    flex: 0 0 auto; padding: 8px 20px; border-top: 1px solid var(--line);
+    background: var(--bg-1); font-family: var(--font-mono); font-size: 10px; color: var(--text-lo);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    position: relative; z-index: 2;
+  }
+  footer a { color: var(--text-mid); text-decoration: none; transition: color 0.2s; }
+  footer a:hover { color: var(--cyan); }
+  .footer-links { display: flex; gap: 14px; }
+
+  #creator-modal {
+    position: fixed; inset: 0; z-index: 900; display: none;
+    align-items: center; justify-content: center; background: rgba(4,7,11,0.72);
+    backdrop-filter: blur(4px);
+  }
+  #creator-modal.show { display: flex; }
+  .creator-card {
+    width: min(420px, 88vw); padding: 28px; border-radius: 12px;
+    background: linear-gradient(160deg, #101a26, #0b131c); border: 1px solid var(--line-hi);
+    box-shadow: 0 0 60px rgba(91,227,255,0.08), 0 20px 50px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .creator-card .close-x { position: absolute; top: 14px; right: 16px; color: var(--text-lo); cursor: pointer; font-size: 18px; }
+  .creator-card .close-x:hover { color: var(--text-hi); }
+  .creator-eyebrow { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); letter-spacing: 2px; margin-bottom: 8px; }
+  .creator-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .creator-role { font-size: 12.5px; color: var(--text-mid); margin-bottom: 20px; }
+  .creator-links { display: flex; flex-direction: column; gap: 10px; }
+  .creator-links a {
+    display: flex; align-items: center; justify-content: space-between; text-decoration: none;
+    color: var(--text-hi); font-family: var(--font-mono); font-size: 12px; padding: 10px 13px;
+    border: 1px solid var(--line); border-radius: 6px; transition: border-color 0.2s, background 0.2s;
+  }
+  .creator-links a:hover { border-color: var(--cyan); background: rgba(91,227,255,0.05); }
+  .creator-links a span.arrow { color: var(--text-lo); }
+  .creator-stack { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--text-lo); line-height: 1.6; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line-hi); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 42vh 120px 1fr; }
+    #side-panel { grid-column: 1; grid-row: 3; }
+    #agent-log { grid-column: 1; grid-row: 2; }
+    #viewport-wrap { grid-row: 1; }
+    .status-strip { display: none; }
+    footer { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div class="boot-mark">AEGIS</div>
+  <div class="boot-bar"><div class="boot-bar-fill" id="boot-fill"></div></div>
+  <div class="boot-line" id="boot-line">initializing sensor mesh...</div>
+  <div class="boot-credit">DESIGNED &amp; DEVELOPED BY <b>NIKHIL CHARY SRIRAMOJU</b></div>
+</div>
+
+<div id="creator-modal">
+  <div class="creator-card">
+    <div class="close-x" id="close-creator">✕</div>
+    <div class="creator-eyebrow">SYSTEM CREATOR</div>
+    <div class="creator-name">NIKHIL CHARY SRIRAMOJU</div>
+    <div class="creator-role">BTech CSE (Final Year) — Designer &amp; Developer of Aegis</div>
+    <div class="creator-links">
+      <a href="https://github.com/Nikhil-creat" target="_blank" rel="noopener">GitHub / Nikhil-creat <span class="arrow">→</span></a>
+      <a href="https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a" target="_blank" rel="noopener">LinkedIn <span class="arrow">→</span></a>
+      <a href="mailto:sriramojunikhil66@gmail.com">sriramojunikhil66@gmail.com <span class="arrow">→</span></a>
+    </div>
+    <div class="creator-stack">
+      Built with PyTorch (CNN damage segmentation) · LangGraph (agentic orchestration)
+      · FAISS + sentence-transformers (RAG grounding) · FastAPI · Docker · Three.js.
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">Æ</div>
+    <div>
+      <div class="brand-name">AEGIS</div>
+      <div class="brand-sub">agentic disaster response digital twin</div>
+    </div>
+  </div>
+  <div class="status-strip">
+    <span><span class="status-dot" style="background:var(--green);color:var(--green)"></span>CNN SERVICE</span>
+    <span><span class="status-dot" style="background:var(--green);color:var(--green)"></span>RAG INDEX</span>
+    <span><span class="status-dot" style="background:var(--green);color:var(--green)"></span>AGENT GRAPH</span>
+    <span class="live-clock" id="clock">--:--:--</span>
+    <span class="creator-badge" id="open-creator">DESIGNED &amp; DEVELOPED BY <b>NIKHIL CHARY SRIRAMOJU</b></span>
+  </div>
+</header>
+
+<main>
+  <div class="panel" id="viewport-wrap">
+    <canvas id="viewport"></canvas>
+    <div class="twin-overlay glass">
+      SECTOR <b>KADAPA-COASTAL-07</b><br>
+      ZONES TRACKED: <b id="ov-zones" class="accent">12</b><br>
+      SIM MODE: <b>REPLAY / SYNTHETIC TELEMETRY</b>
+    </div>
+    <div id="zone-selected" class="glass">
+      <h4 id="zs-id">ZONE</h4>
+      <div class="row"><span>Severity</span><b id="zs-sev">—</b></div>
+      <div class="row"><span>Confidence</span><b id="zs-conf">—</b></div>
+      <div class="row"><span>Flood extent</span><b id="zs-flood">—</b></div>
+      <div class="row"><span>Population</span><b id="zs-pop">—</b></div>
+      <div class="row"><span>Allocation</span><b id="zs-alloc">—</b></div>
+    </div>
+    <div class="legend glass">
+      <span><i style="background:var(--green);color:var(--green)"></i>no-damage</span>
+      <span><i style="background:var(--cyan);color:var(--cyan)"></i>minor</span>
+      <span><i style="background:var(--amber);color:var(--amber)"></i>major</span>
+      <span><i style="background:var(--red);color:var(--red)"></i>destroyed</span>
+    </div>
+    <div class="reliability-panel glass">
+      <div class="rel-head">SYSTEM RELIABILITY</div>
+      <div class="rel-row"><span>Uptime (30d)</span><b id="rel-uptime" class="ok">99.97%</b></div>
+      <div class="rel-row"><span>P95 latency</span><b id="rel-latency">142ms</b></div>
+      <div class="rel-row"><span>Error rate</span><b id="rel-error" class="ok">0.03%</b></div>
+      <div class="rel-row"><span>Circuit breaker</span><b id="rel-breaker" class="ok">CLOSED</b></div>
+      <div class="rel-row"><span>Active retries</span><b id="rel-retries">0</b></div>
+      <svg id="rel-sparkline" viewBox="0 0 240 34" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="panel" id="agent-log">
+    <div id="log-inner"></div>
+  </div>
+
+  <div class="panel" id="side-panel">
+    <div class="panel-head">ZONES <span class="count" id="zone-count">12</span></div>
+    <div id="zone-list"></div>
+    <button id="cycle-btn">RUN AGENT RESPONSE CYCLE</button>
+    <div class="panel-head">ALERTS <span class="count" id="alert-count">0</span></div>
+    <div id="alert-panel"></div>
+  </div>
+</main>
+
+<footer>
+  <span>Aegis v2.0 — CNN + Agentic RAG + Digital Twin</span>
+  <div class="footer-links">
+    <a href="https://github.com/Nikhil-creat" target="_blank" rel="noopener">github.com/Nikhil-creat</a>
+    <a href="https://in.linkedin.com/in/nikhil-chary-sriramoju-95041b38a" target="_blank" rel="noopener">LinkedIn</a>
+    <span>© NIKHIL CHARY SRIRAMOJU</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const bootLines = [
+  "initializing sensor mesh...",
+  "loading CNN damage-segmentation weights...",
+  "building FAISS protocol index...",
+  "compiling LangGraph agent state machine...",
+  "establishing digital twin render context...",
+  "aegis online."
+];
+let bootIdx = 0;
+const bootFill = document.getElementById('boot-fill');
+const bootLine = document.getElementById('boot-line');
+const bootTimer = setInterval(() => {
+  bootIdx++;
+  bootFill.style.width = Math.min((bootIdx/bootLines.length)*100, 100) + '%';
+  if (bootIdx < bootLines.length) bootLine.textContent = bootLines[bootIdx];
+  if (bootIdx >= bootLines.length) {
+    clearInterval(bootTimer);
+    setTimeout(() => document.getElementById('boot').classList.add('hidden'), 350);
+  }
+}, 340);
+
+document.getElementById('open-creator').addEventListener('click', () => document.getElementById('creator-modal').classList.add('show'));
+document.getElementById('close-creator').addEventListener('click', () => document.getElementById('creator-modal').classList.remove('show'));
+document.getElementById('creator-modal').addEventListener('click', e => { if (e.target.id === 'creator-modal') e.currentTarget.classList.remove('show'); });
+
+const SEV_COLOR = { "no-damage":0x3fe0a5, "minor-damage":0x5be3ff, "major-damage":0xffb454, "destroyed":0xff5d6c };
+const SEV_COLOR_CSS = { "no-damage":"#3fe0a5", "minor-damage":"#5be3ff", "major-damage":"#ffb454", "destroyed":"#ff5d6c" };
+
+function seededRand(seed){ let s = seed; return () => { s = (s*9301+49297)%233280; return s/233280; }; }
+const rand = seededRand(42);
+
+function generateZones(n=12){
+  const zones = [];
+  const cols = 4;
+  for (let i=0;i<n;i++){
+    const r = rand();
+    const sev = r < 0.15 ? "destroyed" : r < 0.4 ? "major-damage" : r < 0.7 ? "minor-damage" : "no-damage";
+    zones.push({
+      zone_id: `Z-${String(i+1).padStart(2,'0')}`,
+      severity: sev,
+      confidence: +(0.72 + rand()*0.26).toFixed(2),
+      flood_extent_pct: +(sev==="destroyed"? 45+rand()*40 : sev==="major-damage"? 20+rand()*35 : sev==="minor-damage"? 5+rand()*20 : rand()*8).toFixed(1),
+      population_estimate: Math.floor(150 + rand()*1400),
+      gridX: (i % cols) - (cols-1)/2,
+      gridZ: Math.floor(i/cols) - 1,
+      allocation: []
+    });
+  }
+  return zones;
+}
+let zones = generateZones();
+
+const canvas = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x060a10);
+scene.fog = new THREE.FogExp2(0x060a10, 0.026);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(9, 8, 11);
+
+scene.add(new THREE.AmbientLight(0x445566, 1.0));
+const dirLight = new THREE.DirectionalLight(0xffe8c2, 0.85);
+dirLight.position.set(6, 10, 4);
+scene.add(dirLight);
+const rimA = new THREE.DirectionalLight(0x5be3ff, 0.4);
+rimA.position.set(-8, 4, -6);
+scene.add(rimA);
+const rimB = new THREE.PointLight(0x9d7bff, 0.5, 20);
+rimB.position.set(0, 5, -8);
+scene.add(rimB);
+
+const gridSize = 14;
+const grid = new THREE.GridHelper(gridSize, 28, 0x2c4058, 0x141d29);
+scene.add(grid);
+
+const groundGeo = new THREE.PlaneGeometry(gridSize, gridSize, 1, 1);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a1017, roughness: 1, metalness: 0 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.02;
+scene.add(ground);
+
+const ringGeo = new THREE.RingGeometry(0.05, 7.2, 64);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, opacity: 0.05, side: THREE.DoubleSide });
+const sweepRing = new THREE.Mesh(ringGeo, ringMat);
+sweepRing.rotation.x = -Math.PI/2;
+sweepRing.position.y = 0.02;
+scene.add(sweepRing);
+
+const sweepGeo = new THREE.CircleGeometry(7.2, 48, 0, Math.PI/7);
+const sweepMat = new THREE.MeshBasicMaterial({ color: 0x5be3ff, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
+const sweepCone = new THREE.Mesh(sweepGeo, sweepMat);
+sweepCone.rotation.x = -Math.PI/2;
+sweepCone.position.y = 0.025;
+scene.add(sweepCone);
+
+const zoneGroup = new THREE.Group();
+scene.add(zoneGroup);
+const zoneMeshes = {};
+
+function heightFor(sev){ return sev==="destroyed"?2.7 : sev==="major-damage"?1.95 : sev==="minor-damage"?1.1 : 0.4; }
+
+function buildZoneMeshes(){
+  zoneGroup.clear();
+  for (const z of zones){
+    const h = heightFor(z.severity);
+    const geo = new THREE.BoxGeometry(1.15, h, 1.15);
+    const mat = new THREE.MeshStandardMaterial({
+      color: SEV_COLOR[z.severity], emissive: SEV_COLOR[z.severity], emissiveIntensity: 0.32,
+      roughness: 0.4, metalness: 0.25, transparent: true, opacity: 0.9
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(z.gridX*2.6, h/2, z.gridZ*2.6);
+    mesh.userData.zoneId = z.zone_id;
+    zoneGroup.add(mesh);
+    zoneMeshes[z.zone_id] = mesh;
+
+    const edges = new THREE.EdgesGeometry(geo);
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.22 }));
+    line.position.copy(mesh.position);
+    zoneGroup.add(line);
+
+    const baseRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.7, 0.82, 24),
+      new THREE.MeshBasicMaterial({ color: SEV_COLOR[z.severity], transparent:true, opacity:0.5, side: THREE.DoubleSide })
+    );
+    baseRing.rotation.x = -Math.PI/2;
+    baseRing.position.set(z.gridX*2.6, 0.03, z.gridZ*2.6);
+    zoneGroup.add(baseRing);
+  }
+}
+buildZoneMeshes();
+
+const waterGeo = new THREE.PlaneGeometry(gridSize, gridSize, 1, 1);
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x1a4a6b, transparent: true, opacity: 0.14, roughness: 0.2 });
+const water = new THREE.Mesh(waterGeo, waterMat);
+water.rotation.x = -Math.PI/2;
+water.position.y = 0.05;
+scene.add(water);
+
+let isDragging = false, prevX=0, prevY=0, theta=0.7, phi=1.0, radius=15.5;
+function updateCamera(){
+  camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+  camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+  camera.position.y = radius * Math.cos(phi);
+  camera.lookAt(0,0.5,0);
+}
+updateCamera();
+
+canvas.addEventListener('pointerdown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+window.addEventListener('pointerup', () => isDragging = false);
+window.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  theta += (e.clientX - prevX) * 0.006;
+  phi = Math.min(Math.max(phi - (e.clientY - prevY)*0.006, 0.4), 1.4);
+  prevX = e.clientX; prevY = e.clientY;
+  updateCamera();
+});
+canvas.addEventListener('wheel', e => {
+  radius = Math.min(Math.max(radius + e.deltaY*0.01, 8), 26);
+  updateCamera();
+  e.preventDefault();
+}, { passive:false });
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(Object.values(zoneMeshes));
+  if (hits.length) selectZone(hits[0].object.userData.zoneId);
+});
+
+function fmtPct(v){ return v.toFixed(1)+"%"; }
+
+function renderZoneList(){
+  const list = document.getElementById('zone-list');
+  list.innerHTML = '';
+  zones.forEach(z => {
+    const row = document.createElement('div');
+    row.className = 'zone-row';
+    row.id = 'row-'+z.zone_id;
+    row.innerHTML = `<span class="zone-sev" style="background:${SEV_COLOR_CSS[z.severity]};color:${SEV_COLOR_CSS[z.severity]}"></span>
+      <span class="zone-id">${z.zone_id}</span>
+      <span class="zone-meta">${z.severity} · pop ${z.population_estimate} · flood ${fmtPct(z.flood_extent_pct)}</span>`;
+    row.addEventListener('click', () => selectZone(z.zone_id));
+    list.appendChild(row);
+  });
+  document.getElementById('zone-count').textContent = zones.length;
+  document.getElementById('ov-zones').textContent = zones.length;
+}
+renderZoneList();
+
+let selectedZoneId = null;
+function selectZone(id){
+  selectedZoneId = id;
+  const z = zones.find(zz => zz.zone_id === id);
+  document.querySelectorAll('.zone-row').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById('row-'+id);
+  if (row) row.classList.add('active');
+
+  const panel = document.getElementById('zone-selected');
+  panel.classList.add('show');
+  document.getElementById('zs-id').textContent = z.zone_id;
+  document.getElementById('zs-sev').textContent = z.severity;
+  document.getElementById('zs-conf').textContent = (z.confidence*100).toFixed(0)+'%';
+  document.getElementById('zs-flood').textContent = fmtPct(z.flood_extent_pct);
+  document.getElementById('zs-pop').textContent = z.population_estimate.toLocaleString();
+  document.getElementById('zs-alloc').textContent = z.allocation.length ? z.allocation.join(', ') : '—';
+}
+
+const logInner = document.getElementById('log-inner');
+function pushLog(tag, text){
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  const t = new Date().toLocaleTimeString('en-GB', {hour12:false});
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-tag ${tag}">[${tag.toUpperCase()}]</span><span>${text}</span>`;
+  logInner.appendChild(line);
+  logInner.parentElement.scrollTop = logInner.parentElement.scrollHeight;
+}
+pushLog('triage', 'Digital twin initialized. Awaiting response cycle.');
+
+const SEV_WEIGHT = { "destroyed":4, "major-damage":3, "minor-damage":2, "no-damage":0 };
+const PROTOCOL_SNIPPETS = {
+  "destroyed": "NDMA SOP §2 — rescue teams dispatched first to destroyed/major-damage zones with confirmed population.",
+  "major-damage": "NDMA SOP §2 — rescue teams dispatched first to destroyed/major-damage zones with confirmed population.",
+  "minor-damage": "NDMA SOP §1 — zones 10-30% flood extent require monitoring with ground vehicle standby.",
+  "no-damage": "NDMA SOP §1 — zones below 10% flood extent logged for periodic re-survey only."
+};
+
+let cycleRunning = false;
+document.getElementById('cycle-btn').addEventListener('click', runResponseCycle);
+
+async function runResponseCycle(){
+  if (cycleRunning) return;
+  cycleRunning = true;
+  const btn = document.getElementById('cycle-btn');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+
+  zones.forEach(z => z.allocation = []);
+
+  await delay(400);
+  pushLog('triage', `Ranking ${zones.length} zones by severity × confidence × population risk...`);
+  const ranked = [...zones].sort((a,b) => score(b)-score(a));
+  await delay(600);
+  pushLog('triage', `Priority order: ${ranked.slice(0,5).map(z=>z.zone_id).join(', ')}`);
+
+  await delay(500);
+  const remaining = { rescue_teams: 5, boats: 4, ambulances: 4 };
+  pushLog('resource', `Available: ${remaining.rescue_teams} rescue teams, ${remaining.boats} boats, ${remaining.ambulances} ambulances`);
+  await delay(500);
+  for (const z of ranked){
+    const alloc = [];
+    if ((z.severity==="destroyed"||z.severity==="major-damage") && remaining.rescue_teams>0){ remaining.rescue_teams--; alloc.push('rescue_team'); }
+    if (z.flood_extent_pct>30 && remaining.boats>0){ remaining.boats--; alloc.push('boat'); }
+    if (z.population_estimate>500 && remaining.ambulances>0){ remaining.ambulances--; alloc.push('ambulance'); }
+    z.allocation = alloc;
+  }
+  pushLog('resource', `Allocation complete. Remaining: ${remaining.rescue_teams} teams, ${remaining.boats} boats, ${remaining.ambulances} ambulances`);
+
+  await delay(500);
+  pushLog('comms', 'Retrieving grounded protocol snippets via RAG before drafting alerts...');
+  if (Math.random() < 0.4) await simulateResilienceEvent();
+  await delay(600);
+
+  const alertPanel = document.getElementById('alert-panel');
+  alertPanel.innerHTML = '';
+  ranked.slice(0,5).forEach(z => {
+    const item = document.createElement('div');
+    item.className = 'alert-item';
+    item.innerHTML = `<b>${z.zone_id}</b> — ${z.severity.toUpperCase()} · ${z.allocation.length? z.allocation.join(', ') : 'monitoring only'}<br><span style="color:var(--text-lo)">${PROTOCOL_SNIPPETS[z.severity]}</span>`;
+    alertPanel.appendChild(item);
+  });
+  document.getElementById('alert-count').textContent = 5;
+  pushLog('comms', `Drafted ${Math.min(5,ranked.length)} grounded alerts, each citing its source protocol section.`);
+
+  renderZoneList();
+  buildZoneMeshes();
+  if (selectedZoneId) selectZone(selectedZoneId);
+
+  btn.disabled = false; btn.textContent = 'RUN AGENT RESPONSE CYCLE';
+  cycleRunning = false;
+}
+function score(z){ return SEV_WEIGHT[z.severity]*z.confidence + Math.min(z.population_estimate/1000,5) + z.flood_extent_pct/100; }
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function resize(){
+  const wrap = document.getElementById('viewport-wrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+let t0 = performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const t = (performance.now()-t0)/1000;
+  water.material.opacity = 0.11 + Math.sin(t*0.8)*0.03;
+  sweepCone.rotation.z = t * 0.35;
+  zoneGroup.children.forEach((m,i) => {
+    if (m.isMesh && m.userData.zoneId){
+      m.material.emissiveIntensity = 0.26 + Math.sin(t*1.6 + i)*0.07;
+    }
+  });
+  renderer.render(scene, camera);
+}
+animate();
+
+function tickClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB',{hour12:false});
+}
+tickClock(); setInterval(tickClock, 1000);
+
+/* ---------- Reliability telemetry (simulated, backed by real retry/circuit-breaker logic in services/) ---------- */
+const latencyHistory = Array.from({length: 24}, () => 120 + Math.random()*60);
+function renderSparkline(){
+  const svg = document.getElementById('rel-sparkline');
+  const w = 240, h = 34, max = Math.max(...latencyHistory), min = Math.min(...latencyHistory);
+  const pts = latencyHistory.map((v,i) => {
+    const x = (i/(latencyHistory.length-1))*w;
+    const y = h - ((v-min)/(max-min || 1))*h*0.85 - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  svg.innerHTML = `
+    <polyline points="${pts}" fill="none" stroke="#5be3ff" stroke-width="1.4" opacity="0.9"/>
+    <polyline points="0,${h} ${pts} ${w},${h}" fill="#5be3ff" opacity="0.06"/>
+  `;
+}
+renderSparkline();
+
+function tickReliability(){
+  latencyHistory.shift();
+  const latest = 120 + Math.random()*70;
+  latencyHistory.push(latest);
+  renderSparkline();
+  document.getElementById('rel-latency').textContent = Math.round(latest) + 'ms';
+  const errRate = (Math.random()*0.08).toFixed(2);
+  const errEl = document.getElementById('rel-error');
+  errEl.textContent = errRate + '%';
+  errEl.className = errRate > 0.05 ? 'warn' : 'ok';
+}
+setInterval(tickReliability, 2200);
+
+async function simulateResilienceEvent(){
+  pushLog('resource', 'RAG service timeout detected on retrieve() — retry 1/3 (backoff 200ms)...');
+  const breaker = document.getElementById('rel-breaker');
+  const retries = document.getElementById('rel-retries');
+  retries.textContent = '1';
+  await delay(300);
+  pushLog('resource', 'Retry succeeded — RAG service responded in 187ms. Circuit remains CLOSED.');
+  retries.textContent = '0';
+  breaker.textContent = 'CLOSED'; breaker.className = 'ok';
+}
+</script>
+</body>
+</html>
